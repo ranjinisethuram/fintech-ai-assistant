@@ -431,7 +431,7 @@ async function loadSessions() {
     });
   } catch {
     // /api/sessions isn't available on the Feature 1/2 server — sidebar stays empty gracefully.
-    sessionList.innerHTML = `<p class="sidebar-empty" style="font-size:0.75rem">Session history requires the Feature 3 server.</p>`;
+    sessionList.innerHTML = `<p class="sidebar-empty" style="font-size:0.75rem">Session history requires the customer to login.</p>`;
   }
 }
 
@@ -503,6 +503,18 @@ loadSessions();
 const tabButtons = document.querySelectorAll(".tab-btn");
 const tabPanels  = document.querySelectorAll(".tab-panel");
 
+const loginButton = document.getElementById("login-btn");
+
+const KEYCLOAK_URL = "http://localhost:8080";
+const REALM = "fintech-realm";
+const CLIENT_ID = "fintech-ai-assistant";
+
+const REDIRECT_URI =
+    window.location.origin + "/auth/callback.html";
+
+const AUTH_ENDPOINT =
+    `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`;
+
 /**
  * Switch the visible tab panel.
  * @param {string} tabName - the data-tab value: "chat" or "documents"
@@ -533,6 +545,153 @@ function switchTab(tabName) {
 tabButtons.forEach((btn) => {
   btn.addEventListener("click", () => switchTab(btn.dataset.tab));
 });
+
+/**
+ * Start Keycloak login using Authorization Code + PKCE.
+ */
+async function loginWithKeycloak() {
+
+    // Generate PKCE verifier
+    const codeVerifier = generateCodeVerifier();
+
+    // Store it temporarily because it is needed after redirect
+    sessionStorage.setItem("pkce_code_verifier", codeVerifier);
+
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+    const params = new URLSearchParams({
+        client_id: CLIENT_ID,
+        response_type: "code",
+        scope: "openid profile email",
+        redirect_uri: REDIRECT_URI,
+        code_challenge: codeChallenge,
+        code_challenge_method: "S256"
+    });
+
+    window.location.href =
+        `${AUTH_ENDPOINT}?${params.toString()}`;
+  }
+
+  /**
+ * Handle the redirect from Keycloak.
+ *
+ * The callback page calls this function.
+ */
+async function handleKeycloakCallback() {
+
+    const params = new URLSearchParams(window.location.search);
+
+    const error = params.get("error");
+
+    if (error) {
+        throw new Error(
+            `Keycloak authentication failed: ${error}`
+        );
+    }
+
+    const code = params.get("code");
+
+    if (!code) {
+        throw new Error("Authorization code not found");
+    }
+
+    const codeVerifier =
+        sessionStorage.getItem("pkce_code_verifier");
+
+    if (!codeVerifier) {
+        throw new Error("PKCE verifier not found");
+    }
+
+    /*
+     * Send the authorization code to FastAPI.
+     *
+     * FastAPI will:
+     *   1. Exchange code with Keycloak
+     *   2. Validate the tokens
+     *   3. Fetch the customer profile
+     *   4. Create CustomerContext
+     */
+
+    const response = await fetch(
+        "http://localhost:8000/auth/keycloak/callback",
+        {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            credentials: "include",
+
+            body: JSON.stringify({
+                code: code,
+                code_verifier: codeVerifier,
+                redirect_uri: REDIRECT_URI
+            })
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            `Authentication failed: ${response.status}`
+        );
+    }
+
+    const authResult = await response.json();
+
+    // PKCE verifier is no longer needed
+    sessionStorage.removeItem("pkce_code_verifier");
+
+    return authResult;
+
+  }
+
+  /**
+ * Generate PKCE code verifier.
+ */
+function generateCodeVerifier() {
+
+    const array = new Uint8Array(32);
+
+    crypto.getRandomValues(array);
+
+    return base64UrlEncode(array);
+}
+
+/**
+ * Generate PKCE code challenge.
+ */
+async function generateCodeChallenge(verifier) {
+
+    const data =
+        new TextEncoder().encode(verifier);
+
+    const digest =
+        await crypto.subtle.digest("SHA-256", data);
+
+    return base64UrlEncode(
+        new Uint8Array(digest)
+    );
+}
+
+/**
+ * Base64 URL encoding.
+ */
+function base64UrlEncode(bytes) {
+
+    let binary = "";
+
+    bytes.forEach(byte => {
+        binary += String.fromCharCode(byte);
+    });
+
+    return btoa(binary)
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=/g, "");
+}
+
+loginButton?.addEventListener("click", loginWithKeyCloak);
 
 // =============================================================================
 // Feature 4: Document ingestion

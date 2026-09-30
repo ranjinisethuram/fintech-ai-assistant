@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Engineering Bootcamp · BlockseBlock</title>
+  <title>Fintech AI Assistant</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -14,8 +14,8 @@
   <header class="site-header">
     <span class="logo-mark" aria-hidden="true">🌱</span>
     <div class="titles">
-      <span class="course-title">AI Engineering Bootcamp</span>
-      <span class="org-name">BlockseBlock · Naureen Fathima</span>
+      <span class="course-title">Fintech AI Assistant</span>
+      <!-- <span class="org-name">Fintech AI Team</span> -->
     </div>
   </header>
 
@@ -54,7 +54,7 @@
           aria-selected="true"
           aria-controls="chat-panel"
         >Chat</button>
-        <button
+        <!-- <button
           class="tab-btn"
           role="tab"
           id="tab-documents"
@@ -85,7 +85,7 @@
           data-tab="agent"
           aria-selected="false"
           aria-controls="agent-panel"
-        >Agent</button>
+        >Agent</button> -->
       </nav>
 
       <!-- ===================================================
@@ -99,10 +99,16 @@
             <span class="session-label" id="session-label" hidden></span>
           </h2>
 
+          <span class="toggle-text">
+            <button id="login-btn" class="btn btn-primary btn-full" type="button">
+              Login
+            </button>
+          </span>
+
           <!-- ===================================================
                FEATURE 2: Structured Mode toggle
                =================================================== -->
-          <label class="toggle-label" for="structured-toggle">
+          <!-- <label class="toggle-label" for="structured-toggle">
             <span class="toggle-text">Structured Mode</span>
             <span class="toggle-wrap">
               <input type="checkbox" id="structured-toggle" role="switch" aria-checked="false" />
@@ -115,19 +121,19 @@
                Routes messages through /api/sessions/{id}/chat/smart
                which classifies the query before deciding to retrieve.
                =================================================== -->
-          <label class="toggle-label" for="smart-toggle">
+          <!-- <label class="toggle-label" for="smart-toggle">
             <span class="toggle-text">Smart Mode</span>
             <span class="toggle-wrap">
               <input type="checkbox" id="smart-toggle" role="switch" aria-checked="false" />
               <span class="toggle-track" aria-hidden="true"></span>
             </span>
-          </label>
+          </label> -->
         </div>
 
         <!-- Message history -->
         <div class="message-history" id="message-history" role="log" aria-live="polite" aria-label="Conversation">
           <div class="empty-state" id="empty-state">
-            Start a <strong>New Chat</strong> or ask anything about <strong>[YOUR_DOMAIN]</strong>.
+            Start a <strong>New Chat</strong> or ask anything about <strong> Finance</strong>.
           </div>
         </div>
 
@@ -172,13 +178,13 @@
            FEATURE 4: Documents panel
            Upload files, view status + chunk counts, inspect chunks.
            =================================================== -->
-      <section class="panel tab-panel" id="documents-panel" role="tabpanel" aria-labelledby="tab-documents" hidden>
+      <!-- <section class="panel tab-panel" id="documents-panel" role="tabpanel" aria-labelledby="tab-documents" hidden>
         <div class="panel-header-row">
           <h2 class="panel-title">Documents</h2>
         </div>
 
         <!-- Upload options row (strategy selector + CAG info) -->
-        <div class="upload-options">
+        <!-- <div class="upload-options">
           <label for="strategy-select" class="strategy-label">Chunking strategy:</label>
           <select id="strategy-select" class="strategy-select">
             <option value="sentence">Sentence-aware (default)</option>
@@ -194,10 +200,10 @@
               RAG (what we build here) scales to many documents but requires retrieval to work correctly.
             </span>
           </span>
-        </div>
+        </div> -->
 
         <!-- Upload area -->
-        <div class="upload-area" id="upload-area">
+        <!-- <div class="upload-area" id="upload-area">
           <input
             type="file"
             id="file-input"
@@ -213,15 +219,15 @@
             <span class="upload-spinner" aria-hidden="true"></span>
             <span id="upload-progress-text">Uploading…</span>
           </div>
-        </div>
+        </div> -->
 
         <!-- Document list -->
-        <div id="document-list" class="document-list">
+        <!-- <div id="document-list" class="document-list">
           <p class="sidebar-empty">No documents uploaded yet. Upload a file above to get started.</p>
-        </div>
+        </div> -->
 
         <!-- Alternative architectures callout -->
-        <div class="alt-arch-callout">
+        <!-- <div class="alt-arch-callout">
           <span class="alt-arch-icon" aria-hidden="true">🏗️</span>
           <div class="alt-arch-body">
             <strong>Working with long financial, legal, or technical documents?</strong>
@@ -229,20 +235,20 @@
             — vectorless, reasoning-based RAG that achieved 98.7% on FinanceBench.
             No chunking, no embeddings. See Resource 4 for when to use it.
           </div>
-        </div>
-      </section>
+        </div> -->
+      <!-- </section>  -->
 
       <!-- ===================================================
            FEATURE 5: Ask My Documents (semantic search panel)
            Embeds the user's question, finds nearest chunks, shows scored results.
            =================================================== -->
-      <section class="panel tab-panel" id="search-panel" role="tabpanel" aria-labelledby="tab-search" hidden>
+      <!-- <section class="panel tab-panel" id="search-panel" role="tabpanel" aria-labelledby="tab-search" hidden>
         <div class="panel-header-row">
           <h2 class="panel-title">Ask My Documents</h2>
         </div>
 
         <!-- Search controls -->
-        <div class="search-controls">
+        <!-- <div class="search-controls">
           <div class="search-input-row">
             <input
               type="text"
@@ -256,35 +262,35 @@
             </select>
             <button id="search-btn" class="btn btn-primary" type="button">Search</button>
           </div>
-        </div>
+        </div> -->
 
         <!-- Results area -->
-        <div id="search-results" class="search-results">
+        <!-- <div id="search-results" class="search-results">
           <p class="sidebar-empty">Enter a question above and click Search.</p>
-        </div>
+        </div> -->
 
         <!-- Honest limitations note -->
-        <div class="search-retrieval-note">
+        <!-- <div class="search-retrieval-note">
           <strong>These are raw retrieval results — matching passages from your documents.</strong>
           The score is a <em>similarity</em> score, not a <em>relevance</em> score.
           A passage can be semantically close to your question without actually answering it.
           Coming in Feature 6: the Smart Router combines these passages with LLM generation
           to produce a synthesised answer, and decides when to skip retrieval entirely.
-        </div>
-      </section>
+        </div> -->
+      <!-- </section> -->
 
       <!-- ===================================================
            FEATURE 6: Admin panel
            Part B: tenant identity + switcher
            Part C: retrieval memory + knowledge digest
            =================================================== -->
-      <section class="panel tab-panel" id="admin-panel" role="tabpanel" aria-labelledby="tab-admin" hidden>
-        <div class="panel-header-row">
+      <!-- <section class="panel tab-panel" id="admin-panel" role="tabpanel" aria-labelledby="tab-admin" hidden> -->
+        <!-- <div class="panel-header-row">
           <h2 class="panel-title">Admin</h2>
-        </div>
+        </div> -->
 
         <!-- ── Week 2 Complete banner ── -->
-        <div class="week2-complete-callout">
+        <!-- <div class="week2-complete-callout">
           <div class="week2-complete-icon" aria-hidden="true">🎓</div>
           <div class="week2-complete-body">
             <strong>Week 2 Complete — Full RAG Pipeline</strong>
@@ -295,10 +301,10 @@
               memory (Part C). Coming in Week 3: Tools, Voice, and production deployment.
             </p>
           </div>
-        </div>
+        </div> -->
 
         <!-- ── Part B: Tenant identity ── -->
-        <div class="admin-section">
+        <!-- <div class="admin-section">
           <h3 class="admin-section-title">Tenant Identity <span class="admin-part-badge">Part B</span></h3>
           <p class="admin-section-desc">
             Set the <code>X-Tenant-ID</code> header to switch between tenants.
@@ -312,10 +318,10 @@
           <div id="tenant-info-card" class="admin-info-card">
             <span style="color:var(--color-pistache);font-size:0.82rem">Click Apply to check tenant info.</span>
           </div>
-        </div>
+        </div> -->
 
         <!-- ── Part C: Retrieval memory / Knowledge Digest ── -->
-        <div class="admin-section">
+        <!-- <div class="admin-section">
           <h3 class="admin-section-title">Knowledge Digest <span class="admin-part-badge">Part C</span></h3>
           <p class="admin-section-desc">
             A 2-3 sentence LLM-generated summary of this tenant's retrieval history.
@@ -332,7 +338,7 @@
         </div>
 
         <!-- ── Retrieval log ── -->
-        <div class="admin-section">
+        <!-- <div class="admin-section">
           <h3 class="admin-section-title">Recent Retrievals</h3>
           <p class="admin-section-desc">
             Queries that triggered document retrieval in this session.
@@ -348,35 +354,35 @@
            Uses the two-call tool-calling loop in shared/agent.py.
            Shows a "🔧 Steps" audit trail for each tool invoked.
            =================================================== -->
-      <section class="panel tab-panel" id="agent-panel" role="tabpanel" aria-labelledby="tab-agent" hidden>
-        <div class="panel-header-row">
-          <h2 class="panel-title">
+      <!-- <section class="panel tab-panel" id="agent-panel" role="tabpanel" aria-labelledby="tab-agent" hidden> -->
+        <!-- <div class="panel-header-row"> -->
+          <!-- <h2 class="panel-title">
             Agent
             <span class="panel-subtitle">uses tools to take actions, not just answer</span>
-          </h2>
+          </h2> -->
           <!-- ===================================================
                FEATURE 8: Quick / Multi-Step mode switcher
                Quick = Feature 7 single-turn tool-call loop.
                Multi-Step = Feature 8 plan-and-execute loop with polling.
                =================================================== -->
-          <div class="agent-mode-switcher" role="group" aria-label="Agent mode">
+          <!-- <div class="agent-mode-switcher" role="group" aria-label="Agent mode">
             <button class="agent-mode-btn active" id="agent-mode-quick" data-mode="quick">Quick</button>
             <button class="agent-mode-btn" id="agent-mode-multistep" data-mode="multistep">Multi-Step</button>
-          </div>
-        </div>
+          </div> -->
+        <!-- </div> -->
 
         <!-- Agent requires a session — prompt if none active -->
-        <div id="agent-no-session" class="agent-no-session-notice" hidden>
+        <!-- <div id="agent-no-session" class="agent-no-session-notice" hidden>
           <p>The agent needs a session to track conversation history.</p>
           <button id="agent-create-session-btn" class="btn btn-primary" type="button">Start New Session</button>
-        </div>
+        </div> -->
 
         <!-- ===================================================
              FEATURE 9: Connected Services panel (MCP)
              Collapsible — click to expand and see which MCP servers
              are connected and what tools they expose.
              =================================================== -->
-        <div class="mcp-services-section" id="mcp-services-section">
+        <!-- <div class="mcp-services-section" id="mcp-services-section">
           <button class="mcp-services-toggle" id="mcp-services-toggle" type="button"
                   aria-expanded="false" aria-controls="mcp-services-body">
             <span class="mcp-services-icon" aria-hidden="true">🔌</span>
@@ -389,10 +395,10 @@
               <span class="mcp-loading">Click to load connected MCP servers…</span>
             </div>
           </div>
-        </div>
+        </div> -->
 
         <!-- Conversation history -->
-        <div class="message-history" id="agent-history" role="log" aria-live="polite" aria-label="Agent conversation">
+        <!-- <div class="message-history" id="agent-history" role="log" aria-live="polite" aria-label="Agent conversation">
           <div class="empty-state" id="agent-empty-state">
             The agent can <strong>check availability</strong>, <strong>create tickets</strong>,
             and <strong>look up information</strong>. Try asking it to do one of these.
@@ -402,10 +408,10 @@
               <button class="agent-example-btn" type="button">What are your business hours?</button>
             </div>
           </div>
-        </div>
+        </div> -->
 
         <!-- Input row -->
-        <div class="chat-input-row">
+        <!-- <div class="chat-input-row">
           <label for="agent-input" class="sr-only">Agent message</label>
           <input
             type="text"
@@ -415,12 +421,12 @@
             autocomplete="off"
           />
           <button id="agent-send-btn" class="btn btn-primary" type="button">Run</button>
-        </div>
+        </div> -->
 
         <!-- ===================================================
              FEATURE 9: Week 3 Complete callout
              =================================================== -->
-        <div class="week2-complete-callout week3-agent-callout">
+        <!-- <div class="week2-complete-callout week3-agent-callout">
           <div class="week2-complete-icon" aria-hidden="true">🎓</div>
           <div class="week2-complete-body">
             <strong>Week 3 Complete — Tools, Multi-Step &amp; MCP</strong>
@@ -431,8 +437,8 @@
               Coming in Week 4: Docker, production deployment, and eval harness.
             </p>
           </div>
-        </div>
-      </section>
+        </div> -->
+      <!-- </section> -->
 
       <!-- ===================================================
            PROVIDER INFO — shows which LLM + Voice provider is active.
@@ -445,7 +451,7 @@
       </section>
 
       <!-- ===================================================
-           FUTURE FEATURES — new panels will be added here each week.
+           FUTURE FEATURES — new panels can be added here.
            =================================================== -->
 
     </main><!-- /.main-content -->

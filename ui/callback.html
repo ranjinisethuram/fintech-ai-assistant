@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Signing in...</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+<p>Signing you in...</p>
+
+<script src="app.js"></script>
+
+<script>
+
+(async function () {
+
+    try {
+
+        const result =
+            await handleKeycloakCallback();
+
+        console.log("Customer profile:", result.customer);
+
+        /*
+         * Redirect to the actual assistant.
+         */
+        window.location.href = "/index.html";
+
+    } catch (error) {
+
+        console.error(error);
+
+        document.body.innerHTML = `
+            <h3>Login failed</h3>
+            <p>${error.message}</p>
+            <a href="/index.html">Return to assistant</a>
+        `;
+    }
+
+})();
+
+</script>
+
+</body>
+</html>
