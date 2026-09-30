@@ -96,10 +96,28 @@ async def make_plan(message: str) -> list[str]:
     Fall back to [message] (single-step plan) if parsing fails.
     =========================================================================
     """
-    raise NotImplementedError(
-        "TODO: Implement make_plan(). See the step-by-step comments above."
-    )
+    #raise NotImplementedError(
+      #  "TODO: Implement make_plan(). See the step-by-step comments above."
+    #)
+    messages = [
+        {"role": "system", "content": _PLANNER_SYSTEM_PROMPT},
+        {"role": "user", "content": message}
+    ]
 
+    response = await call_llm(messages=messages,temperature=0.7,max_tokens=1000,response_format="json_object")
+    raw = response.content or "[]"
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed,dict):
+            for key in ("steps","plan","tasks"):
+                if isinstance(parsed.get(key),list):
+                    parsed = parsed.get(key)
+                    break
+        if isinstance(parsed,list):
+            return [str(s) for s in parsed[:5]]
+    except(json.JSONDecodeError, TypeError):
+        pass
+    return [message]
 
 async def execute_plan(task_id: str) -> None:
     """
@@ -159,6 +177,36 @@ async def execute_plan(task_id: str) -> None:
       update_task(task_id, status="error", error=str(exc))
     =========================================================================
     """
-    raise NotImplementedError(
-        "TODO: Implement execute_plan(). See the step-by-step comments above."
-    )
+    #raise NotImplementedError(
+     #   "TODO: Implement execute_plan(). See the step-by-step comments above."
+    #)
+    task = get_task(task_id)
+    update_task(task_id, status="executing", steps_completed=[])
+    plan = task.plan or []
+    steps_completed: List[dict] = []
+    try:
+      for i, step in enumerate(plan):
+        step_results = await run_agent(message=step, session_id=task.session_id,tenant_id=task.tenant_id)
+        step_record = {
+          "step_index": i,
+          "step": step,
+          "result": step_results.get(result,""),
+          "tools_used": step_results.get(tools_used,[])
+        }
+        steps_completed.append(step_record)
+        update_task(task_id,steps_completed=list(steps_completed))
+
+      step_summary = "\n".join(
+        f"Step {r['step_index']+1} ({r['step']}): {r['result']}"
+        for r in steps_completed
+      )
+
+      synth_messages = [{"role": "system", "content": _SYNTHESIZER_SYSTEM_PROMPT},
+      {"role": "user", "content": f"Original Request: {task.message}\n\n Step Results: \n{step_summary}"}]
+      synth_response = await call_llm(messages=synth_messages,temperature=0.7,max_tokens=800)
+      final_answer = synth_response.content or "Task Completed."
+      update_task(task_id,status="Done",result=final_answer)
+    except Exception as ex:
+      update_task(task_id,status="Error",error= str(ex))
+
+

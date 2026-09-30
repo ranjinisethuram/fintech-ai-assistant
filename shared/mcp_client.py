@@ -58,6 +58,7 @@ except ImportError:
     StdioServerParameters = None
     stdio_client = None
 
+BASE_DIR = r"C:\Users\Admin\Desktop\blockseblock-ai-bootcamp"
 
 # =============================================================================
 # Server registry
@@ -73,7 +74,9 @@ except ImportError:
 # =============================================================================
 
 def _build_server_registry() -> list[dict]:
-    demo_server_cmd = [sys.executable, "-m", "shared.mcp_demo_server"]
+    #demo_server_cmd = [sys.executable, "-m", "shared.mcp_demo_server"]
+    DEMO_SERVER_FILE_PATH = os.path.join(BASE_DIR, "shared", "mcp_demo_server.py")
+    demo_server_cmd = [sys.executable,DEMO_SERVER_FILE_PATH]
     registry = [
         {
             "name":      "demo",
@@ -115,19 +118,29 @@ async def _list_tools_from_server(server_entry: dict) -> list[dict]:
     params = StdioServerParameters(
         command=server_entry["command"][0],
         args=server_entry["command"][1:],
+        cwd=BASE_DIR,
+        env=os.environ.copy()
     )
     tools: list[dict] = []
-    async with stdio_client(params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            result = await session.list_tools()
-            for tool in result.tools:
-                tools.append({
-                    "name":        tool.name,
-                    "description": tool.description or "",
-                    "inputSchema": tool.inputSchema or {},
-                    "server":      server_entry["name"],
-                })
+    try:
+        async with stdio_client(params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                result = await session.list_tools()
+                for tool in result.tools:
+                    tools.append({
+                        "name":        tool.name,
+                        "description": tool.description or "",
+                        "inputSchema": tool.inputSchema or {},
+                        "server":      server_entry["name"],
+                    })
+    except BaseException as ex:
+        import traceback
+        print(f"Failed to connect to MCP Server!!",file=sys.stderr)
+        print("--- DETAILED TRACEBACK ---", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        print("--------------------------", file=sys.stderr)
+        
     return tools
 
 

@@ -120,33 +120,34 @@ Choose a process that:
 Fill in the template for your domain:
 
 ```
-FLOW NAME:
+FLOW NAME: Fixed Deposit enquiry.
 
-TRIGGER:
+TRIGGER: User says to provide info on opening an fixed deposit.
 
 STEPS:
   Step 1:
-    Tool needed:
-    Input to tool:
-    Output:
+    Tool needed: get_balance(accountId)
+    Input to tool: savings account id of the logged in customer.
+    Output: returns json object containing accountId, available balance, currency
 
   Step 2:
-    Tool needed:
-    Input to tool:
-    Output:
+    Tool needed: lookup_info(topic)
+    Input to tool: user message containing enquiry on a specific topic.
+    Output: returns the json object containing info on the enquired topic.
 
-  Step 3 (optional):
-    Tool needed:
-    Input to tool:
-    Output:
+  Step 3 (optional): This comes up only if user proceeds to open a FD after reviewing the FD details.
+    Tool needed: create_fixed_deposit(deposit_amount,deposit_tenure,interest_payout_frequency,auto_renewal)
+    Input to tool: deposit_amount, deposit_tenure,interest_payout_frequency,auto_renewal
+    Output: returns json object containing the success/failure. If success, deposited_anount, deposited_tenure, payout_frequency,auto_renewal or reason for failure.
 
 EXPECTED OUTPUT:
-  Format:
-  Key information included:
+  Format: Combines the response of all the steps and returns a synthesized response conataing bullet points.
+  Key information included: The available balance from the savings account and the details on opening a FD account, that includes types of FD, rate of interest and min tenure for each FD type.
 
 FAILURE MODES TO HANDLE:
 ```
-
+If get_balance() returns error, provide user friendly message to try again and proceed to next stpe to provide info on enquired topic.
+If lookup_info() returns error, provide user friendly message to try again. If the enquired topic not found, provide the list of topics for which it can provide info.
 ---
 
 ## Choosing a Framework

@@ -158,8 +158,11 @@ if _MCP_AVAILABLE:
         return [mcp_types.TextContent(type="text", text=json.dumps(result, indent=2))]
 
     async def main():
-        async with stdio_server() as (read_stream, write_stream):
-            await server.run(read_stream, write_stream, server.create_initialization_options())
+        try:
+            async with stdio_server() as (read_stream, write_stream):
+                await server.run(read_stream, write_stream, server.create_initialization_options())
+        except (anyio.WouldBlock, asyncio.CancelledError):
+            print("Client disconnected. Stream closed gracefully.", file=sys.stderr)
 
 else:
     async def main():

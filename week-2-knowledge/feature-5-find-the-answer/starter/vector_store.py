@@ -119,8 +119,13 @@ def add_chunks(document_id: str, chunks: list[str], metadatas: list[dict]) -> No
     #     metadatas=cleaned_metadatas, # list[dict] — stored alongside each vector
     #     ids=ids,                    # list[str]  — unique ID per chunk
     # )
-    raise NotImplementedError(
-        "Implement the collection.add() call — see the TODO above (Step 1)."
+    #raise NotImplementedError(
+     #   "Implement the collection.add() call — see the TODO above (Step 1)."
+    #)
+    collection.add(
+        documents = chunks,
+        metadatas = cleaned_metadatas,
+        ids = ids
     )
 
 
@@ -173,9 +178,10 @@ def search(
     #   results["documents"][0]  → list[str]   — the chunk texts
     #   results["metadatas"][0]  → list[dict]  — metadata for each chunk
     #   results["distances"][0]  → list[float] — L2 distances (lower = more similar)
-    raise NotImplementedError(
-        "Implement collection.query() — see the TODO above (Step 2)."
-    )
+    #raise NotImplementedError(
+     #   "Implement collection.query() — see the TODO above (Step 2)."
+    #)
+    results = collection.query(**kwargs)
 
     # TODO (Feature 5, Step 3): convert distances to scores and build output.
     #
@@ -194,3 +200,15 @@ def search(
     #         "document_id": meta.get("document_id", ""),
     #     })
     # return output
+    output = []
+    zipped_result = zip(results["documents"][0],results["metadatas"][0],results["distances"][0])
+    for doc_text, meta, distance in zipped_result:
+        score = max(0.0, 1.0 - (distance / 2.0))
+        output.append({
+            "text": doc_text,
+            "filename": meta.get("filename",""),
+            "chunk_index": meta.get("chunk_index", 0),
+            "score": round(score, 4),
+            "document_id": meta.get("document_id", "")
+        })
+    return output

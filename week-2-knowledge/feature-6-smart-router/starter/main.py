@@ -26,6 +26,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+sys.path.insert(0, r"C:\Users\Admin\Desktop\PageIndex")
 
 from shared.document_store import (
     delete_document,
@@ -60,12 +61,13 @@ from shared.vector_store import (
     get_stats as vector_get_stats,
     search as vector_search,
 )
+from pageindex import PageIndexClient
 
 # Import YOUR implementation from the local router.py
 from router import classify_query
 
 CONTEXT_WINDOW_SIZE = 20
-
+tree_json_path = r"C:\Users\Admin\Desktop\PageIndex\results"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -350,16 +352,16 @@ async def search_stats() -> dict:
 # Feature 6: Smart Router  (YOUR IMPLEMENTATION GOES HERE)
 # ---------------------------------------------------------------------------
 
-_SMART_SYSTEM_PROMPT = """You are a helpful AI assistant for [YOUR_DOMAIN].
+_SMART_SYSTEM_PROMPT = """You are a helpful AI assistant for Personal Finance.
 Answer clearly and concisely in plain English.
 If you don't know something, say so honestly rather than guessing."""
 
-_SMART_RAG_SYSTEM_PROMPT = """You are a helpful AI assistant for [YOUR_DOMAIN].
+_SMART_RAG_SYSTEM_PROMPT = """You are a helpful AI assistant for Personal Finance.
 You have been given relevant excerpts from documents to help answer the user's question.
 Use the provided context to give an accurate, grounded answer.
 If the context doesn't contain enough information, say so and answer from general knowledge where appropriate."""
 
-_SMART_HYBRID_SYSTEM_PROMPT = """You are a helpful AI assistant for [YOUR_DOMAIN].
+_SMART_HYBRID_SYSTEM_PROMPT = """You are a helpful AI assistant for Personal Finance.
 Some potentially relevant document excerpts have been retrieved for context, but their
 relevance to this specific question is uncertain. Use them if helpful; ignore them if not.
 Answer honestly and flag if you are uncertain."""
@@ -423,25 +425,91 @@ async def smart_chat(
     if session is None:
         raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found.")
 
-    try:
         # ============================================================
         # TODO STEP 4–6: implement the routing logic described above.
         # The hints in the docstring walk you through each branch.
         # ============================================================
-        raise NotImplementedError(
-            "TODO: implement the Smart Router routing logic. "
-            "Read the docstring above — it describes every branch with variable names."
-        )
+        #raise NotImplementedError(
+           # "TODO: implement the Smart Router routing logic. "
+           # "Read the docstring above — it describes every branch with variable names."
+        #)
+    classification = await classify_query(request.message)
+    needs_retrieval = classification["needs_retrieval"]
+    confidence = classification["confidence"]
+    query_type = classification["query_type"]
 
-    except NotImplementedError:
-        raise HTTPException(
-            status_code=501,
-            detail=(
-                "smart_chat is not yet implemented. "
-                "Open starter/router.py and implement classify_query() (Steps 1–3), "
-                "then return here to implement the routing branches (Steps 4–6)."
-            ),
-        )
+    high_confidence = confidence > 0.6
+    source: str
+    chunks_used: list[dict] = []
+    retrieval_method: str = None
+    system_prompt: str
+
+    if high_confidence and needs_retrieval:
+        if query_type == "professional_document" and settings.enable_pageindex:
+            page_index_data = PageIndexClient.load(tree_json_path)
+            result = page_index_data.retrieve(request.message)
+            chunks_used = [
+                {
+                    "text": result.text,
+                    "filename": result.source,
+                    "chunk_index": 0,
+                    "score": 1.0,
+                    "document_id": "",
+                    "retrieval_method": "pageindex"
+                }
+            ]
+            source = "pageindex"
+            retrieval_method = "pageindex"
+        else:
+            chunks_used = vector_search(request.message, top_k=5)
+            source = "rag"
+            retrieval_method = "vector"
+        system_prompt= _SMART_RAG_SYSTEM_PROMPT
+    elif high_confidence and not needs_retrieval:
+        source = "llm"
+        retrieval_method = "none"
+        system_prompt = _SMART_SYSTEM_PROMPT
+    else:
+        chunks_used = vector_search(request.message, top_k=5)
+        source = "hybrid"
+        retrieval_method = "vector"
+        system_prompt = _SMART_HYBRID_SYSTEM_PROMPT
+
+    messages: list[dict] = [{"role": "system", "content": system_prompt}]
+    
+    if chunks_used:
+        context_block = _build_context_block(chunks_used)
+        messages.append({"role":"system","content": context_block})
+
+    session_history = session.messages
+    for msg in session_history:
+        messages.append({"role": msg.role, "content": msg.content})
+    
+    messages.append({"role": "user", "content": request.message})
+    
+    result = await call_llm(messages)
+    answer = result.content or ""
+
+    add_message(session_id, "user", request.message)
+    add_message(session_id, "assistant", answer)
+
+    return SmartChatResponse(
+        answer=answer,
+        source=source,
+        chunks_used=chunks_used,
+        confidence=confidence,
+        retrieval_method=retrieval_method
+    )
+    
+    #except NotImplementedError:
+        #raise HTTPException(
+            #status_code=501,
+            #detail=(
+                #"smart_chat is not yet implemented. "
+                #"Open starter/router.py and implement classify_query() (Steps 1–3), "
+                #"then return here to implement the routing branches (Steps 4–6)."
+            #),
+        #)
 
 
 # ---------------------------------------------------------------------------

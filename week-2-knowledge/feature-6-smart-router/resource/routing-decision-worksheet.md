@@ -90,16 +90,16 @@ There are deliberately two of each type: 2 general, 2 domain-specific, 1 profess
 **Query 1:** "What causes inflation?"
 
 Your classification:
-- `needs_retrieval`: ___________
-- `confidence`: ___________
-- `query_type`: ___________
+- `needs_retrieval`: ________false___
+- `confidence`: ______0.8_____
+- `query_type`: __general_________
 
 `classify_query()` returned:
-- `needs_retrieval`: ___________
-- `confidence`: ___________
-- `query_type`: ___________
+- `needs_retrieval`: _______false____
+- `confidence`: ____0.9_______
+- `query_type`: ________general___
 
-Path taken: ___________
+Path taken: _____llm______
 
 *Hint: This is a general economics question. Any LLM trained on public data knows the answer without needing your uploaded documents.*
 
@@ -108,52 +108,53 @@ Path taken: ___________
 **Query 2:** "Explain how transformer attention works."
 
 Your classification:
-- `needs_retrieval`: ___________
-- `confidence`: ___________
-- `query_type`: ___________
+- `needs_retrieval`: ______false_____
+- `confidence`: ________0.8___
+- `query_type`: _____general______
 
 `classify_query()` returned:
-- `needs_retrieval`: ___________
-- `confidence`: ___________
-- `query_type`: ___________
+- `needs_retrieval`: ___false________
+- `confidence`: _____0.9______
+- `query_type`: _____general______
 
-Path taken: ___________
+Path taken: ______llm_____
 
 *Hint: Also general knowledge. Well-documented in public ML literature. Should not trigger retrieval from your uploaded docs.*
 
 ---
 
 **Query 3:** "What does our company's refund policy say about digital downloads?"
+(Can you tell me what is the emergency fund target defined in the provided financial goals data)
 
 Your classification:
-- `needs_retrieval`: ___________
-- `confidence`: ___________
-- `query_type`: ___________
+- `needs_retrieval`: _______true____
+- `confidence`: _______0.9____
+- `query_type`: _____domain______
 
 `classify_query()` returned:
-- `needs_retrieval`: ___________
-- `confidence`: ___________
-- `query_type`: ___________
+- `needs_retrieval`: ________true___
+- `confidence`: _____0.9______
+- `query_type`: ____domain_______
 
-Path taken: ___________
+Path taken: ________rag___
 
 *Hint: "Our company's" is a strong domain signal. The answer cannot come from training data — it requires the specific uploaded policy document.*
 
 ---
 
 **Query 4:** "According to the uploaded onboarding guide, what is the process for requesting IT equipment?"
-
+(Based on the budget framework defined and recent transaction ledger shared, what kind of budget plan do you suggest)
 Your classification:
-- `needs_retrieval`: ___________
-- `confidence`: ___________
-- `query_type`: ___________
+- `needs_retrieval`: ______true_____
+- `confidence`: ___________0.9
+- `query_type`: ______domain_____
 
 `classify_query()` returned:
-- `needs_retrieval`: ___________
-- `confidence`: ___________
-- `query_type`: ___________
+- `needs_retrieval`: ______true_____
+- `confidence`: _________0.8__
+- `query_type`: ____domain_______
 
-Path taken: ___________
+Path taken: ____rag_______
 
 *Hint: Explicit reference to "the uploaded onboarding guide." Strong domain signal, high confidence expected.*
 
@@ -162,16 +163,16 @@ Path taken: ___________
 **Query 5:** "What was the net revenue attributable to continued operations in Q3, broken down by geographic segment, as reported in the annual filing?"
 
 Your classification:
-- `needs_retrieval`: ___________
-- `confidence`: ___________
-- `query_type`: ___________
+- `needs_retrieval`: _______true____
+- `confidence`: ________0.9___
+- `query_type`: _______professional_document____
 
 `classify_query()` returned:
 - `needs_retrieval`: ___________
 - `confidence`: ___________
 - `query_type`: ___________
 
-Path taken: ___________
+Path taken: _________pageindex__
 
 *Hint: Financial document, multi-part, requires navigating to the specific segment reporting section. If ENABLE_PAGEINDEX=true, this should route to PageIndex. If not, RAG with a note that similarity-based retrieval may struggle.*
 
@@ -180,16 +181,16 @@ Path taken: ___________
 **Query 6:** "Tell me about the policy."
 
 Your classification:
-- `needs_retrieval`: ___________
-- `confidence`: ___________
-- `query_type`: ___________
+- `needs_retrieval`: _______true____
+- `confidence`: ___________0.3
+- `query_type`: ___ambiguos________
 
 `classify_query()` returned:
 - `needs_retrieval`: ___________
 - `confidence`: ___________
 - `query_type`: ___________
 
-Path taken: ___________
+Path taken: ____hybrid_______
 
 *Hint: Which policy? "Policy" appears in countless contexts. "Tell me about" is vague. Classifier should return low confidence → hybrid path. This is the ambiguous case by design.*
 

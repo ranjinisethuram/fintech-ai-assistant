@@ -60,7 +60,6 @@ def check_availability(date: str, time: str) -> dict:
         "next_available": "tomorrow at 2:00 PM" if not is_available else None,
     }
 
-
 CHECK_AVAILABILITY_SCHEMA = {
     "type": "function",
     "function": {
@@ -255,3 +254,9 @@ LOOKUP_INFO_SCHEMA = {
         },
     },
 }
+
+#-----------------------------------------------------------------------------------------------------------------
+# Domain Specific Tool: Check Available Balance
+#-----------------------------------------------------------------------------------------------------------------
+
+

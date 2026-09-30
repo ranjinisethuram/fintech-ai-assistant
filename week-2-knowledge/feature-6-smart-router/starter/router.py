@@ -63,9 +63,31 @@ from shared.llm_client import call_llm
 # ============================================================
 
 _CLASSIFIER_SYSTEM_PROMPT = """
-# TODO: write the classifier system prompt here.
-# See the docstring above for what fields to request and what each means.
-# Remove this comment and replace with your prompt string.
+You are helpful AI assitant for Personal Finance who helps the user 
+achieve a budget goal, categorize their transactions and generate budget summary report.
+
+For every user query, respond only with the below JSON format(no markdown, no extra text) having exactly the below fields.
+
+{
+  "needs_retrieval": bool,
+  "confidence": float (0.0-1.0),
+  "reasoning": str (one sentence),
+  "query_type": "general" | "domain" | "professional_document" | "ambiguous"
+}
+
+Query Type Definitions:
+  - "general": factual/common knowledge, greetings, math. No domain documents needed.
+  - "domain": a query specific to the user's personal finance that requires knowledge of their shared budget goals, transaction ledger and liabilities and loan summary etc.
+  - "professional_document": requires precise navigation of structured professional documents For ex: navigating to specific section of tax filings or transaction ledger of specific month.
+  - "ambiguous": genuinely unclear whether documents help.
+
+Confidence Score Guidelines:
+ - 0.9-1.0: Very clear (obvious greeting vs obvious domain question).
+ - 0.7-0.8: Reasonably clear, some uncertainity.
+ - 0.4-0.6: Genuinely ambiguous. Could go ethier way.
+ - 0.0-0.4: You really dont know.
+
+Respond ONLY with the JSON object. No preamble, no explanation, no markdown fences.
 """
 
 
@@ -94,10 +116,36 @@ async def classify_query(query: str) -> dict:
     #       user:   the query string
     # ============================================================
 
-    raise NotImplementedError(
-        "TODO: call the LLM with _CLASSIFIER_SYSTEM_PROMPT and temperature=0.1. "
-        "See the docstring and hints above."
+    messages = [
+        {"role": "system", "content": _CLASSIFIER_SYSTEM_PROMPT},
+        {"role": "user", "content": query},
+    ]
+
+    result = await call_llm(
+        messages,
+        temperature=0.1,
+        response_format={"type": "json_object"},
     )
+
+    try:
+        json_data = json.loads(result.content or "{}")
+        return {
+            "needs_retrieval": bool(json_data.get("needs_retrieval", True)),
+            "confidence": min(1.0, max(0.0, float(json_data.get("confidence", 0.5)))),
+            "reasoning": str(json_data.get("reasoning", "")),
+            "query_type": json_data.get("query_type", "ambiguous")
+        }
+    except(json.JSONDecodeError, Exception):
+        return {
+            "needs_retrieval": True,
+            "confidence": 0.5,
+            "reasoning": "Classification failed - defaulting to retrieval.",
+            "query_type": "ambiguous"
+        }
+    #raise NotImplementedError(
+      #  "TODO: call the LLM with _CLASSIFIER_SYSTEM_PROMPT and temperature=0.1. "
+       # "See the docstring and hints above."
+    #)
 
     # ============================================================
     # TODO STEP 3: Parse the LLM response and return a dict

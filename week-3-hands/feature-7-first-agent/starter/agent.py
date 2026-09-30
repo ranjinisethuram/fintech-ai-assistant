@@ -55,7 +55,8 @@ TOOLS_REGISTRY: dict[str, tuple[Any, dict]] = {
 
 _TOOL_SCHEMAS = [schema for _, schema in TOOLS_REGISTRY.values()]
 
-_AGENT_SYSTEM_PROMPT = """You are a helpful AI assistant for [YOUR_DOMAIN].
+_AGENT_SYSTEM_PROMPT = """You are a helpful AI assistant for booking appointments, 
+assisting in raising support tickets and provide information about organizational process.
 You have access to tools that can check availability, create support tickets,
 and look up factual information. Use these tools whenever the user's request
 would benefit from real data — don't guess at facts you could look up.
@@ -108,10 +109,11 @@ async def run_agent(
     #
     # Store the result in: first_response
     # =========================================================================
-    raise NotImplementedError(
-        "TODO STEP 1: Call call_llm() with messages and tools=_TOOL_SCHEMAS. "
-        "See the docstring above."
-    )
+    #raise NotImplementedError(
+     #   "TODO STEP 1: Call call_llm() with messages and tools=_TOOL_SCHEMAS. "
+      #  "See the docstring above."
+    #)
+    first_response = await call_llm(messages=messages, tools=_TOOL_SCHEMAS, temperature=0.3, max_tokens=1000)
 
     steps: list[dict] = []
     tools_used: list[str] = []
@@ -127,6 +129,15 @@ async def run_agent(
     # Hint: first_response.tool_calls is a list of dicts:
     #   [{"id": "call_abc", "name": "check_availability", "arguments": {...}}]
     # =========================================================================
+    if not first_response.tool_calls:
+        answer=first_response.content
+        add_message(session_id,"user",message)
+        add_message(session_id,"assistant",answer)
+        return {
+            "result": answer,
+            "steps": [],
+            "tools_used": []
+        }
 
     # =========================================================================
     # TODO STEP 3: Execute each tool call.
@@ -163,6 +174,40 @@ async def run_agent(
     #       ],
     #   })
     # =========================================================================
+    tool_call_message:dict = {
+        "role": "assistant",
+        "content": first_response.content,
+        "tool_calls": [
+            {
+                "id": tc["id"],
+                "type": "function",
+                "function": {
+                    "name": tc["name"],
+                    "arguments": json.dumps(tc["arguments"])
+                }
+            }
+            for tc in first_response.tool_calls
+        ]
+    }
+
+    messages.append(tool_call_message)
+
+    for tc in first_response.tool_calls:
+        fn, _= TOOLS_REGISTRY.get(tc["name"], (None,None))
+        if fn is None:
+            tool_result = {"error": f"Unknown tool '{tc["name"]}'. Available: {list(TOOLS_REGISTRY)}"}
+        else:
+            try:
+                tool_result= fn(**tc["arguments"])
+            except Exception as exc:
+                tool_result = {"error": exc.str(), "tool": tc["name"]}
+        steps.append({"tool": tc["name"], "args": tc["arguments"], "result": tool_result})
+        tools_used.append(tc["name"])
+        messages.append({
+            "role": "tool",
+            "tool_call_id": tc["id"],
+            "content": json.dumps(tool_result)
+        })
 
     # =========================================================================
     # TODO STEP 4: Make the second LLM call to synthesize the final answer.
@@ -181,3 +226,12 @@ async def run_agent(
     #     "tools_used": list(dict.fromkeys(tools_used)),  # deduplicated
     # }
     # =========================================================================
+    second_response= await call_llm(messages=messages,temperature=0.7,max_tokens=1000)
+    answer=second_response.content or ""
+    add_message(session_id,"user",message)
+    add_message(session_id,"assistant",answer)
+    return {
+        "result": answer,
+        "steps": steps,
+        "tools_used": list(dict.fromkeys(tools_used))
+    }

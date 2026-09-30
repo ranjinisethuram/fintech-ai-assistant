@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
 # Rename "My AI Assistant" to something meaningful for your domain.
 # Example: "Alpine Trail Co. Assistant", "MediHelper", "HRBot"
 app = FastAPI(
-    title="My AI BlockSeBlock Assistant",  # TODO: rename this to your domain assistant's name
+    title="Personal Finance Coach",  # TODO: rename this to your domain assistant's name
     description="Domain-Specific AI Assistant — AI Engineering Bootcamp, BlockseBlock",
     version="1.0.0",
     lifespan=lifespan,
@@ -67,7 +67,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
         {
             "role": "system",
             "content": (
-                "You are a helpful AI assistant for [YOUR_DOMAIN]. "  # TODO: replace with your domain
+                "You are a helpful AI assistant for Personal Finance. "  # TODO: replace with your domain
                 "Answer clearly and concisely. "
                 "If you don't know something, say so honestly rather than guessing."
             ),

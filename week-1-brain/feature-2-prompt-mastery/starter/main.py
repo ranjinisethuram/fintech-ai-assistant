@@ -104,11 +104,31 @@ async def chat(request: ChatRequest) -> ChatResponse:
 #   - Shorter, more direct prompts usually outperform long rambling ones.
 #
 # See resource/prompt-engineering-workbook.md for worked examples and exercises.
-_STRUCTURED_SYSTEM_PROMPT = """
-# TODO (Feature 2, Step 1): Replace this string with your structured system prompt.
-# The prompt should instruct the model to return JSON matching StructuredResponse.
-# See the comments above for the required fields and tips.
-"""
+_STRUCTURED_SYSTEM_PROMPT = """You are helpful AI assitant for Personal Finance who helps the user 
+achieve a budget goal, categorize their transactions and generate budget summary report.
+
+For every user query, respond only with the below JSON format(no markdown, no extra text) having exactly the below fields.
+
+{
+  "intent": "<one of: general_question | domain_question | action_request | unclear>",
+  "answer": "<your response to the user query, written in plain English text.>",
+  "confidence": "<a number between 0.0 and 1.0, that represent your confidence in the response you provide.>",
+  "sources_needed": "<true if domain documents would help improve your response, false otherwise.>"
+}
+
+Intent Definitions:
+  - "general_question": factual/knowledge query not specific to Personal Finance.
+  - "domain_question": a query specific to Personal Finance.
+  - "action_request": user wants something DONE. For ex, genarate monthly report on spendings.
+  - "unclear": ambiguous, nonsensical or doesn't fit any other categories.
+
+Confidence Score Guidelines:
+ - 0.9-1.0: You are certain with clear common knowledge/domain facts.
+ - 0.6-0.8: You are quite sure but the user must verify.
+ - 0.3-0.5: You are uncertain. The answer may be partially correct or incomplete.
+ - 0.0-0.2: You dont know and mostly guessing.
+
+Respond ONLY with the JSON object. No preamble, no explanation, no markdown fences."""
 
 
 @app.post("/api/chat/structured", response_model=StructuredResponse)
@@ -152,7 +172,16 @@ async def chat_structured(request: ChatRequest) -> StructuredResponse:
     # The fallback is important: even with JSON mode enabled, some providers
     # may occasionally return malformed output, and a graceful degradation is
     # always better than a 500 error.
-    pass
+    try:
+        data = json.loads(raw_text)
+        return StructuredResponse(**data)
+    except(json.JSONDecodeError, Exception):
+        return StructuredResponse(
+            intent="unclear",
+            answer=raw_text or "The assistant returned an unexpected response.",
+            confidence=0.0,
+            sources_needed=False
+        )
 
 
 @app.get("/api/health")
@@ -174,6 +203,7 @@ async def provider_info():
         "anthropic": settings.anthropic_model,
         "cohere": settings.cohere_model,
         "ollama": settings.ollama_model,
+        "groq": settings.groq_model,
         "custom": settings.custom_model,
     }
 

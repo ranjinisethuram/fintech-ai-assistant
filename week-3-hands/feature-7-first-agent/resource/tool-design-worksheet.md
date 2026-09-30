@@ -220,21 +220,21 @@ Use this before writing any code. A five-minute sketch here prevents an hour of 
 
 ### Tool 1
 
-**Tool name:** ___________
+**Tool name:** ______get_balance_____
 
 **One-sentence description** (this becomes `schema["function"]["description"]`):
 
-> ___________
+> ____Returns the total available balance of a customer account_______
 
 **Trigger phrase** (complete this: "Call this when the user..."): 
 
-> ___________
+> ______Call this when the logged in customer enquires about the current or available balance in their account._____
 
 **Parameters:**
 
 | Name | Type | Description |
-|---|---|---|
-| | | |
+|customerId|uuid|unique id of the logged in customer|
+|accountId |uuid |account id associated with the customer |
 | | | |
 | | | |
 
@@ -243,16 +243,20 @@ Use this before writing any code. A five-minute sketch here prevents an hour of 
 ```python
 {
     # fill in the keys and example values
+    "accountId": aedb12345h567,
+    "availableBalance": 5,88,000.00,
+    "currency": "INR"
 }
 ```
 
 **Test message — a user message that SHOULD trigger this tool:**
 
-> ___________
+> _____Can you tell me the current available balance of my account.______
 
 **Counter-test — a message that should NOT trigger this tool** (but might look similar):
 
-> ___________
+> ____Can you give me the total amount spent from last 10 transactions._______
+Can you tell me the total available balance from the account with the id bearing aer12iuhgbd
 
 ---
 

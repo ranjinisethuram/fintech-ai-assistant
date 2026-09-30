@@ -80,7 +80,8 @@ def extract_text(file_bytes: bytes, filename: str) -> str:
     # TODO (Feature 4, Step 1a): Handle .txt files.
     # Hint: return file_bytes.decode("utf-8", errors="replace")
     if ext == ".txt":
-        raise NotImplementedError("Implement .txt extraction — see the docstring above.")
+        return file_bytes.decode("utf-8", errors="replace")
+        #raise NotImplementedError("Implement .txt extraction — see the docstring above.")
 
     # TODO (Feature 4, Step 1b): Handle .pdf files.
     # Hint: from pypdf import PdfReader; use io.BytesIO(file_bytes)
@@ -183,16 +184,26 @@ def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]
         #   current, current_len = tail, tail_len
 
         if current and current_len + slen > chunk_size:
-            raise NotImplementedError(
-                "Implement chunk emission and overlap tail — see the TODO above (Step 2a)."
-            )
+            #raise NotImplementedError(
+             #   "Implement chunk emission and overlap tail — see the TODO above (Step 2a)."
+            #)
+            chunks.append(" ".join(current))
+            tail, tail_len = [],0
+            for s in reversed(current):
+                if tail_len + len(s) + 1 > overlap:
+                    break
+                tail.insert(0,s)
+                tail_len += len(s) + 1
+            current, current_len = tail, tail_len
 
         # TODO (Feature 4, Step 2b): append the sentence to current and update current_len.
         # current.append(sentence)
         # current_len += slen + 1   # +1 for the space join() inserts between sentences
-        raise NotImplementedError(
-            "Implement sentence accumulation — see the TODO above (Step 2b)."
-        )
+        #raise NotImplementedError(
+         #   "Implement sentence accumulation — see the TODO above (Step 2b)."
+        #)
+        current.append(sentence)
+        current_len += slen + 1
 
     # Step 3 (given — do not modify): emit the last chunk.
     if current:

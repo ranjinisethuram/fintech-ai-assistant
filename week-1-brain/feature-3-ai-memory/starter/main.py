@@ -166,7 +166,9 @@ async def new_session() -> dict:
     # TODO (Feature 3, Step 6a): Implement new_session().
     # One line: session_id = create_session()
     # One line: return {"session_id": session_id}
-    raise NotImplementedError("Implement new_session()")
+    session_id = create_session()
+    return {"session_id": session_id}
+    #raise NotImplementedError("Implement new_session()")
 
 
 @app.get("/api/sessions", response_model=list[SessionSummary])
@@ -184,7 +186,21 @@ async def sessions_list() -> list[SessionSummary]:
       next((m.content for m in s.messages if m.role == "user"), "")
     """
     # TODO (Feature 3, Step 6b): Implement sessions_list().
-    raise NotImplementedError("Implement sessions_list()")
+    session_summaries = []
+    session_list = list_sessions()
+    for session in session_list:
+        first_user_message = next((m.content for m in session.messages if m.role == "user"), "")
+        title = (first_user_message[:60]+"...") if len(first_user_message) > 60 else (first_user_message or "New Conversation")
+        session_summary = SessionSummary(
+            id=session.id,
+            created_at=session.created_at.isoformat(),
+            message_count=len(session.messages),
+            title=title
+        )
+        session_summaries.append(session_summary)
+    return session_summaries
+
+    #raise NotImplementedError("Implement sessions_list()")
 
 
 @app.post("/api/sessions/{session_id}/chat", response_model=StructuredResponse)
@@ -235,7 +251,22 @@ async def session_chat(session_id: str, request: ChatRequest) -> StructuredRespo
       10. Return structured.
     """
     # TODO (Feature 3, Step 6c): Implement session_chat() following the steps above.
-    raise NotImplementedError("Implement session_chat()")
+    session = get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, deatil=f"Session '{session_id}' not found. Create one with POST /api/sessions")
+    messages = [{"role": "system", "content": _STRUCTURED_SYSTEM_PROMPT}]
+    history = session.messages
+    if len(history) > CONTEXT_WINDOW_SIZE:
+        history = history[-CONTEXT_WINDOW_SIZE:]
+    for message in history:
+        messages.append({"role": message.role, "content": message.content})
+    messages.append({"role": "user", "content": request.message})
+    add_message(session_id,"user",request.message)
+    result = await call_llm(messages,temperature=0.3,response_format={"type": "json_object"})
+    structured_response = _parse_structured(result.content or "")
+    add_message(session_id,"assistant",structured_response.answer)
+    return structured_response
+    #raise NotImplementedError("Implement session_chat()")
 
 
 @app.get("/api/sessions/{session_id}/history", response_model=list[Message])
@@ -248,7 +279,11 @@ async def session_history(session_id: str) -> list[Message]:
       2. Return session.messages.
     """
     # TODO (Feature 3, Step 6d): Implement session_history().
-    raise NotImplementedError("Implement session_history()")
+    session = get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, deatil=f"Session '{session_id}' not found. Create one with POST /api/sessions")
+    return session.messages
+    #raise NotImplementedError("Implement session_history()")
 
 
 @app.get("/api/health")
