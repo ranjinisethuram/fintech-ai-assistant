@@ -641,7 +641,7 @@ async function handleKeycloakCallback() {
 
     // PKCE verifier is no longer needed
     sessionStorage.removeItem("pkce_code_verifier");
-
+    console.log("Authentication successful:", authResult);
     return authResult;
 
   }

@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     # Groq (recommended for beginners — free tier at console.groq.com)
     # -------------------------------------------------------------------------
-    groq_api_key: str = ""
+    groq_api_key: str = "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"
     groq_model: str = "llama-3.3-70b-versatile"
 
     # -------------------------------------------------------------------------
@@ -178,9 +178,9 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     # Domain / assistant identity
     # -------------------------------------------------------------------------
-    assistant_name: str = "My AI Assistant"
+    assistant_name: str = "Fintech AI Assistant"
     assistant_description: str = (
-        "You are a helpful assistant. Replace this with your domain description."
+        "You are a personal banking assistant.You help the authenticated customer understand their own financial information."
     )
 
     def effective_voice_provider(self) -> str:
