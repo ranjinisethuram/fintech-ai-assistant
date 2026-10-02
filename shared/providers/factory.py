@@ -92,6 +92,9 @@ def _build_provider(provider_name: str) -> LLMProvider:
 
 def _validate_fields(provider: str, required_settings: list[str]) -> None:
     """Raise a clear error if a required .env variable is missing for the chosen provider."""
+    # print(f"Settings: {settings}")
+    # groq_api_key = getattr(settings, "groq_api_key", "")
+    # print(f"get attr of groq_api_key: {groq_api_key}")
     missing = [
         field for field in required_settings if not getattr(settings, field, "")
     ]

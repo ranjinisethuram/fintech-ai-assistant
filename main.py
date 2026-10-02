@@ -22,7 +22,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[0]))
 
 from shared.llm_client import call_llm
 from shared.provider_check import check_provider_config
@@ -90,7 +90,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
                     "- Retrieve transaction history"
                     "- Retrieve transaction details"
                 "Rules:"
-                    "1. Only use tools when they are necessary to answer the request."
+                    "1. Only use tools when they are necessary to answer the request. If specific to a customer, ask them to login first."
                     "2. Never invent financial information."
                     "3. Use tool results as the source of truth for account and transaction data."
                     "4. Never assume access to another customer's information."
@@ -141,6 +141,7 @@ async def provider_info():
     }
 
 
-_ui_path = Path(__file__).resolve().parents[3] / "ui"
+_ui_path = Path(__file__).resolve().parents[0] / "ui"
+print(f"UI path: {_ui_path}")
 if _ui_path.exists():
     app.mount("/", StaticFiles(directory=str(_ui_path), html=True), name="ui")

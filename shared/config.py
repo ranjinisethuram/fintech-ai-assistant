@@ -5,7 +5,9 @@ All environment variables are read here. No other file in this project should
 call os.getenv() directly — import `settings` from this module instead.
 """
 from pathlib import Path
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from shared.secrets import get_secret
 
 
 class Settings(BaseSettings):
@@ -39,7 +41,7 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     # Groq (recommended for beginners — free tier at console.groq.com)
     # -------------------------------------------------------------------------
-    groq_api_key: str = "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"
+    groq_api_key: str = Field(default_factory=lambda:str(get_secret('GROQ_API_KEY')))
     groq_model: str = "llama-3.3-70b-versatile"
 
     # -------------------------------------------------------------------------
@@ -129,12 +131,12 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     # "env" = read from .env (default). "infisical" or "doppler" = vault.
     # See shared/secrets.py for setup instructions.
-    secrets_provider: str = "env"
+    secrets_provider: str = "infisical"
 
     # Infisical machine identity (used when secrets_provider="infisical")
-    infisical_client_id: str = ""
-    infisical_client_secret: str = ""
-    infisical_project_id: str = ""
+    infisical_client_id: str = "dadd5f41-cc36-4454-991f-86e7e260713d"
+    infisical_client_secret: str = "cf42f9d16c5d5f919c4d13226ed1ed50e874383aaae67fc28ba1719309567fab"
+    infisical_project_id: str = "ac0f031f-780c-4843-8a0d-788ee34caeaf"
     infisical_env: str = "dev"
 
     # -------------------------------------------------------------------------
@@ -204,3 +206,4 @@ class Settings(BaseSettings):
 
 # Single shared instance — import this object, don't instantiate Settings yourself.
 settings = Settings()
+# print(f"Loaded Key: {settings.groq_api_key}")

@@ -48,7 +48,9 @@ Verify your vault integration is working:
 """
 import os
 from functools import lru_cache
+from dotenv import load_dotenv
 
+load_dotenv()  # Load .env if present (for local development)
 
 def _load_from_infisical(secret_name: str) -> str:
     """Fetch a single secret from the Infisical vault."""
@@ -80,8 +82,10 @@ def _load_from_infisical(secret_name: str) -> str:
         secret_name=secret_name,
         project_id=project_id,
         environment_slug=os.getenv("INFISICAL_ENV", "dev"),
+        secret_path="/"
     )
-    return secret.secret_value
+    # print(f"Secret Value for {secret_name}: {secret}")  # Debugging
+    return secret.secretValue
 
 
 def get_secret(name: str) -> str:
@@ -97,6 +101,7 @@ def get_secret(name: str) -> str:
     os.environ already contains them when this function runs.
     """
     provider = os.getenv("SECRETS_PROVIDER", "env").lower()
+    print(f"Using secrets provider: {provider}")  # Debugging
 
     if provider == "infisical":
         return _load_from_infisical(name)

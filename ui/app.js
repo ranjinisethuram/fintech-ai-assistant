@@ -505,12 +505,14 @@ const tabPanels  = document.querySelectorAll(".tab-panel");
 
 const loginButton = document.getElementById("login-btn");
 
-const KEYCLOAK_URL = "http://localhost:8080";
+const KEYCLOAK_URL = "http://localhost:9090";
 const REALM = "fintech-realm";
 const CLIENT_ID = "fintech-ai-assistant";
 
 const REDIRECT_URI =
-    window.location.origin + "/auth/callback.html";
+    window.location.origin + "/callback.html";
+
+console.log(`Redirect URI: ${REDIRECT_URI}`);
 
 const AUTH_ENDPOINT =
     `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`;
@@ -549,7 +551,7 @@ tabButtons.forEach((btn) => {
 /**
  * Start Keycloak login using Authorization Code + PKCE.
  */
-async function loginWithKeycloak() {
+async function loginWithKeyCloak() {
 
     // Generate PKCE verifier
     const codeVerifier = generateCodeVerifier();
@@ -558,6 +560,8 @@ async function loginWithKeycloak() {
     sessionStorage.setItem("pkce_code_verifier", codeVerifier);
 
     const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+    console.log(`Redirect URI: ${REDIRECT_URI}`);
 
     const params = new URLSearchParams({
         client_id: CLIENT_ID,
