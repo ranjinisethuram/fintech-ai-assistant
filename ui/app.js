@@ -17,6 +17,55 @@ const chatInput      = document.getElementById("chat-input");
 const sendBtn        = document.getElementById("send-btn");
 const emptyState     = document.getElementById("empty-state");
 
+let loginRedirectInProgress = false;
+
+function showSessionExpiredToast(message = "Your session expired. Please log in again.") {
+  let toast = document.getElementById("session-expired-toast");
+
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "session-expired-toast";
+    toast.style.position = "fixed";
+    toast.style.top = "20px";
+    toast.style.right = "20px";
+    toast.style.zIndex = "9999";
+    toast.style.maxWidth = "360px";
+    toast.style.padding = "12px 16px";
+    toast.style.borderRadius = "10px";
+    toast.style.background = "#b42318";
+    toast.style.color = "#ffffff";
+    toast.style.fontSize = "14px";
+    toast.style.fontWeight = "600";
+    toast.style.boxShadow = "0 12px 30px rgba(0,0,0,0.2)";
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(-8px)";
+    toast.style.transition = "opacity 0.25s ease, transform 0.25s ease";
+    document.body.appendChild(toast);
+  }
+
+  toast.textContent = message;
+  toast.style.opacity = "1";
+  toast.style.transform = "translateY(0)";
+
+  clearTimeout(toast._hideTimer);
+  toast._hideTimer = setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(-8px)";
+  }, 2200);
+}
+
+function triggerFreshLogin(message) {
+  if (loginRedirectInProgress) return;
+  loginRedirectInProgress = true;
+
+  clearKeycloakSession();
+  showSessionExpiredToast(message);
+
+  setTimeout(() => {
+    loginWithKeyCloak();
+  }, 1200);
+}
+
 /**
  * Append a message bubble to the conversation history.
  *
@@ -64,6 +113,14 @@ async function sendMessage() {
   const text = chatInput.value.trim();
   if (!text) return;
 
+  try {
+    await ensureValidAccessToken();
+  } catch (err) {
+    triggerFreshLogin(err.message || "Your session has expired. Please log in again.");
+    return;
+  }
+
+  markUserActivity();
   chatInput.value = "";
   sendBtn.disabled = true;
 
@@ -88,8 +145,16 @@ async function sendMessage() {
     endpoint = "/api/chat";
   }
 
-  // Build headers — include X-Tenant-ID if a custom tenant is set.
+  const auth = getAuthContext();
+
+  // Build headers — prefer sending the session id from AuthContext.
   const headers = { "Content-Type": "application/json" };
+  if (auth?.session_id) {
+    headers["X-Session-Id"] = auth.session_id;
+  } else {
+    const token = await ensureValidAccessToken();
+    headers["Authorization"] = `Bearer ${token}`;
+  }
   if (activeTenantId) headers["X-Tenant-ID"] = activeTenantId;
 
   try {
@@ -101,6 +166,10 @@ async function sendMessage() {
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        triggerFreshLogin(err.detail || "Your session has expired. Please log in again.");
+        return;
+      }
       throw new Error(err.detail || `Server error ${response.status}`);
     }
 
@@ -440,6 +509,13 @@ async function loadSessions() {
  */
 async function createNewSession() {
   try {
+    await ensureValidAccessToken();
+  } catch (err) {
+    triggerFreshLogin(err.message || "Your session has expired. Please log in again.");
+    return;
+  }
+
+  try {
     const res = await fetch(`${API_BASE}/api/sessions`, { method: "POST" });
     if (!res.ok) throw new Error(`Server error ${res.status}`);
 
@@ -493,6 +569,10 @@ function escapeHtml(str) {
 
 newChatBtn?.addEventListener("click", createNewSession);
 
+document.addEventListener("click", markUserActivity);
+document.addEventListener("keydown", markUserActivity);
+document.addEventListener("pointerdown", markUserActivity);
+
 // Load session list on page load so the sidebar populates immediately.
 loadSessions();
 
@@ -509,10 +589,145 @@ const KEYCLOAK_URL = "http://localhost:9090";
 const REALM = "fintech-realm";
 const CLIENT_ID = "fintech-ai-assistant";
 
-const REDIRECT_URI =
-    window.location.origin + "/callback.html";
+function getRedirectUri() {
+  return new URL("/callback.html", window.location.origin).toString();
+}
 
-console.log(`Redirect URI: ${REDIRECT_URI}`);
+function clearKeycloakSession() {
+  sessionStorage.removeItem("auth_context");
+  sessionStorage.removeItem("customer_context");
+  sessionStorage.removeItem("keycloak_last_activity_ms");
+}
+
+function markUserActivity() {
+  sessionStorage.setItem("keycloak_last_activity_ms", String(Date.now()));
+}
+
+function saveAuthContext(auth) {
+  if (!auth) return;
+  try {
+    const copy = Object.assign({}, auth);
+    if (copy.customer_context) {
+      sessionStorage.setItem("customer_context", JSON.stringify(copy.customer_context));
+      delete copy.customer_context;
+    }
+    sessionStorage.setItem("auth_context", JSON.stringify(copy));
+    markUserActivity();
+  } catch (e) {
+    // Fallback
+    sessionStorage.setItem("auth_context", JSON.stringify(auth));
+    markUserActivity();
+  }
+}
+
+function getAuthContext() {
+  const raw = sessionStorage.getItem("auth_context");
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+function getCustomerContext() {
+  const raw = sessionStorage.getItem("customer_context");
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+function isAccessTokenExpired(token) {
+  if (!token) return true;
+
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return true;
+
+    const padded = payload.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - (payload.length % 4)) % 4);
+    const json = atob(padded);
+    const claims = JSON.parse(json);
+    const expMs = Number(claims.exp || 0) * 1000;
+    return Date.now() >= expMs;
+  } catch {
+    return true;
+  }
+}
+
+async function refreshKeycloakToken() {
+  const auth = getAuthContext();
+  const refreshToken = auth?.refresh_token;
+  if (!refreshToken) {
+    clearKeycloakSession();
+    throw new Error("Your session has expired. Please log in again.");
+  }
+
+  const refreshExpiresMs = Number(auth?.refresh_token_expiry || 0);
+  const lastActivityMs = Number(sessionStorage.getItem("keycloak_last_activity_ms") || Date.now());
+  const idleMs = Date.now() - lastActivityMs;
+
+  if (refreshExpiresMs > 0 && idleMs >= refreshExpiresMs) {
+    clearKeycloakSession();
+    throw new Error("Your session expired due to inactivity. Please log in again.");
+  }
+
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+  });
+
+  const response = await fetch(`${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
+  });
+
+  if (!response.ok) {
+    clearKeycloakSession();
+    triggerFreshLogin("Your session has expired. Please log in again.");
+    throw new Error("Your session has expired. Please log in again.");
+  }
+
+  const tokenData = await response.json();
+
+  // Send updated tokens to the server to validate and receive updated AuthContext
+  try {
+    const resp = await fetch(`${window.location.origin}/api/customer/session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(tokenData),
+    });
+    if (!resp.ok) {
+      clearKeycloakSession();
+      throw new Error("Failed to update auth context on server");
+    }
+    const newAuth = await resp.json();
+    saveAuthContext(newAuth);
+    return newAuth.access_token;
+  } catch (err) {
+    clearKeycloakSession();
+    throw err;
+  }
+}
+
+async function ensureValidAccessToken() {
+  const auth = getAuthContext();
+  const currentToken = auth?.access_token;
+  if (!currentToken) {
+    throw new Error("Please log in before sending a message.");
+  }
+
+  const refreshExpiresMs = Number(auth?.refresh_token_expiry || 0);
+  const lastActivityMs = Number(sessionStorage.getItem("keycloak_last_activity_ms") || Date.now());
+  const idleMs = Date.now() - lastActivityMs;
+
+  if (refreshExpiresMs > 0 && idleMs >= refreshExpiresMs) {
+    clearKeycloakSession();
+    throw new Error("Your session expired due to inactivity. Please log in again.");
+  }
+
+  if (isAccessTokenExpired(currentToken)) {
+    return refreshKeycloakToken();
+  }
+
+  return currentToken;
+}
 
 const AUTH_ENDPOINT =
     `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`;
@@ -552,6 +767,7 @@ tabButtons.forEach((btn) => {
  * Start Keycloak login using Authorization Code + PKCE.
  */
 async function loginWithKeyCloak() {
+    const redirectUri = getRedirectUri();
 
     // Generate PKCE verifier
     const codeVerifier = generateCodeVerifier();
@@ -561,19 +777,18 @@ async function loginWithKeyCloak() {
 
     const codeChallenge = await generateCodeChallenge(codeVerifier);
 
-    console.log(`Redirect URI: ${REDIRECT_URI}`);
+    console.log(`Redirect URI: ${redirectUri}`);
 
     const params = new URLSearchParams({
         client_id: CLIENT_ID,
         response_type: "code",
         scope: "openid profile email",
-        redirect_uri: REDIRECT_URI,
+        redirect_uri: redirectUri,
         code_challenge: codeChallenge,
         code_challenge_method: "S256"
     });
 
-    window.location.href =
-        `${AUTH_ENDPOINT}?${params.toString()}`;
+    window.location.href = `${AUTH_ENDPOINT}?${params.toString()}`;
   }
 
   /**
@@ -582,6 +797,12 @@ async function loginWithKeyCloak() {
  * The callback page calls this function.
  */
 async function handleKeycloakCallback() {
+    const redirectUri = getRedirectUri();
+    console.log("Keycloak callback URL:", window.location.href);
+
+    if (!window.location.search) {
+        throw new Error("No Keycloak callback parameters found");
+    }
 
     const params = new URLSearchParams(window.location.search);
 
@@ -617,7 +838,7 @@ async function handleKeycloakCallback() {
      */
 
     const response = await fetch(
-        "http://localhost:8000/auth/keycloak/callback",
+        `${window.location.origin}/auth/keycloak/callback`,
         {
             method: "POST",
 
@@ -630,23 +851,49 @@ async function handleKeycloakCallback() {
             body: JSON.stringify({
                 code: code,
                 code_verifier: codeVerifier,
-                redirect_uri: REDIRECT_URI
+                redirect_uri: redirectUri
             })
         }
     );
 
+    // console.log("Keycloak callback response status:", response.status);
+    // console.log("Keycloak callback response body:", await response.text());
+
     if (!response.ok) {
+        const bodyText = await response.text().catch(() => "");
+        const details = bodyText ? ` — ${bodyText.slice(0, 200)}` : "";
         throw new Error(
-            `Authentication failed: ${response.status}`
+            `Authentication failed: ${response.status}${details}`
         );
     }
 
     const authResult = await response.json();
+    const normalizedAuthResult = {
+        ok: Boolean(authResult?.ok),
+        token: authResult?.token ?? {}
+    };
+
+    // Send tokens to the server so it can validate and return the AuthContext.
+    const resp = await fetch(`${window.location.origin}/api/customer/session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(normalizedAuthResult.token),
+    });
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => "");
+      throw new Error(`Failed to create auth session: ${resp.status} ${body}`);
+    }
+    const auth = await resp.json();
+    saveAuthContext(auth);
 
     // PKCE verifier is no longer needed
     sessionStorage.removeItem("pkce_code_verifier");
-    console.log("Authentication successful:", authResult);
-    return authResult;
+
+    // console.log("Authentication successful JSON:", JSON.stringify(normalizedAuthResult, null, 2));
+    // console.log("Token keys:", Object.keys(normalizedAuthResult.token || {}));
+
+    return normalizedAuthResult;
 
   }
 

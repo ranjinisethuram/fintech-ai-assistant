@@ -22,12 +22,13 @@
         const result =
             await handleKeycloakCallback();
 
-        console.log("Customer profile:", result.customer);
+        console.log("Keycloak callback result:", result);
 
         /*
-         * Redirect to the actual assistant.
+         * Redirect back to the app after the auth code exchange succeeds.
+         * Use replace() so the callback page is not left in browser history.
          */
-        window.location.href = "/index.html";
+        window.location.replace("/index.html");
 
     } catch (error) {
 
