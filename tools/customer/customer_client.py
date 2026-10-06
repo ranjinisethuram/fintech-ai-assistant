@@ -7,13 +7,13 @@ from data.AccountSummary import AccountSummary
 from data.BeneficiaryResponse import BeneficiaryResponse
 
 
-async def fetch_customer_profile(customer_id: str, access_token: str, base_url: str = "http://localhost:8080") -> CustomerContext:
+async def fetch_customer_profile(customer_id: str, access_token: str, base_url: str = "http://localhost:8088") -> CustomerContext:
     """Fetch customer profile from Java backend and map to the existing CustomerContext dataclass.
 
-    GET {base_url}/api/v1/customers/profile/{customerId}
+    GET {base_url}/ai-tools/customers/{customerId}/profile
     Authorization: Bearer {accessToken}
     """
-    url = f"{base_url.rstrip('/')}/api/v1/customers/profile/{customer_id}"
+    url = f"{base_url.rstrip('/')}/ai-tools/customers/{customer_id}/profile"
     headers = {"Authorization": f"Bearer {access_token}"}
 
     async with httpx.AsyncClient(timeout=10.0) as client:
@@ -48,8 +48,8 @@ async def fetch_customer_profile(customer_id: str, access_token: str, base_url: 
         customer_id=payload.get("customerId") or payload.get("customer_id"),
         customer_name=payload.get("customerName") or payload.get("customer_name"),
         default_account_id=payload.get("defaultAccountId") or payload.get("default_account_id"),
-        AccountSummary=accounts,
-        BeneficiaryResponse=beneficiaries,
+        accounts=accounts,
+        beneficiaries=beneficiaries,
     )
 
     return profile
